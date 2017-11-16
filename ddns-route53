@@ -8,7 +8,8 @@ declare comment="${DDNS_ROUTE53_COMMENT:-Updated at $(date +"$DATE_FORMAT")}"
 declare zone_id="$DDNS_ROUTE53_ZONE_ID"
 declare record_set="$DDNS_ROUTE53_RECORD_SET"
 declare handler_script="$DDNS_ROUTE53_SCRIPT"
-declare old_ip ip
+declare ip="$DDNS_ROUTE53_IP"
+declare old_ip
 
 function errlog() {
   echo "$@" >&2
