@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+#just keep the hostname strip the rest.
+declare hostname="${DDNS_ROUTE53_HOST%%.*}"
+# default interval 12 hours
+declare interval="${DDNS_ROUTE53_INTERVAL:-434200}"
+declare domain="${DDNS_ROUTE53_DOMAIN}"
 declare -r DATE_FORMAT="%Y-%m-%d %H:%M:%S"
 declare -r VERSION="2.0.2"
 declare ttl=${DDNS_ROUTE53_TTL:-300}
@@ -12,11 +17,11 @@ declare ip="$DDNS_ROUTE53_IP"
 declare old_ip
 
 function errlog() {
-  echo "$@" >&2
+  echo "$(date) - $@" >&2
 }
 
 function log() {
-  echo "$@"
+  echo "$(date) - $@"
 }
 
 function usage() {
@@ -27,6 +32,10 @@ Dynamic DNS updater using Amazon Route53.
 
 Options:
   -z, --zone-id <ZONE_ID>         Amazon Route53 hosted zone ID (required)
+  -h, --hostname <HOSTNAME>       Hostname to be used in combination with
+                                  the -d flag to create the record-set
+  -n, --interval <seconds>        The time in seconds between runs.
+  -d, --domain <DOMAIN>           Domain used to form the record set domain
   -r, --record-set <RECORD_SET>   Amazon Route53 record set name (required)
   -t, --ttl <SECONDS>             TTL for DNS record
   -y, --type <TYPE>               DNS record type
@@ -59,6 +68,9 @@ function init-args() {
   while (( $# > 0 )); do
     case "$1" in
       -z|--zone-id) zone_id="$2"; shift ;;
+      -n|--interval) interval="$2"; shift ;;
+      -d|--domain) domain="$2"; shift ;;
+      -h|--host) hostname="$2"; shift ;;
       -r|--record-set) record_set="$2"; shift ;;
       -i|--ip) ip="$2"; shift ;;
       -t|--ttl) ttl="$2"; shift ;;
@@ -70,6 +82,11 @@ function init-args() {
     esac
     shift
   done
+  if [[ -n ${hostname} && -n ${domain} ]]; then
+    record_set="${hostname}.${domain}"
+    echo "record_set is $record_set"
+  fi
+
   if [[ -z "$ip" ]]; then
     ip="$(dig +short myip.opendns.com @resolver1.opendns.com)"
   fi
@@ -81,7 +98,7 @@ function validate-args() {
   if [[ -z "$zone_id" ]]; then
     errlog "Missing -z or --zone-id or \$DDNS_ROUTE53_ZONE_ID"
     return 1
-  elif [[ -z "$record_set" ]]; then
+  elif [[ -z $hostname && -z $domain && -z $record_set ]]; then
     errlog "Missing -r or --record-set or \$DDNS_ROUTE53_RECORD_SET"
     return 1
   elif [[ -n "$handler_script" && ! -x "$handler_script" ]]; then
@@ -93,6 +110,7 @@ function validate-args() {
   fi
   return 0
 }
+
 
 function update-dns-entry() {
   local ip=$1 output success batch
@@ -129,19 +147,21 @@ function run-handler-script() {
 }
 
 function main() {
-  init-args "$@"
-  validate-args || exit 1
-  if ! valid-ip "$ip"; then
-    log "Invalid IP address: '$ip'"
-    exit 1
-  fi
-  if [[ "$old_ip" != "$ip" ]]; then
-    log "IP changed from '$old_ip' to '$ip', updating entry"
-    update-dns-entry "$ip" && run-handler-script "$old_ip" "$ip"
-  else
-    log "Current IP == $ip"
-  fi
-  exit $?
+  while true; do
+    init-args "$@"
+    validate-args || exit 1
+    if ! valid-ip "$ip"; then
+      log "Invalid IP address: '$ip'"
+      exit 1
+    fi
+    if [[ "$old_ip" != "$ip" ]]; then
+      log "IP changed from '$old_ip' to '$ip', updating entry"
+      update-dns-entry "$ip" && run-handler-script "$old_ip" "$ip"
+    else
+      log "Current HOSTNAME == $record_set Current IP == $ip No change needed"
+    fi
+    sleep $interval
+  done
 }
 
 main "$@"

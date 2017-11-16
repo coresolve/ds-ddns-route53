@@ -2,7 +2,6 @@ apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   creationTimestamp: null
-  generation: 1
   labels:
     k8s-app: ddns-route53
   name: ddns-route53
@@ -19,28 +18,33 @@ spec:
       name: ddns-route53
     spec:
       containers:
-        image: quay.io/dcooley/ds-ddns-route53:v1
+      - image: quay.io/dcooley/ds-ddns-route53:v1
         imagePullPolicy: Always
-        args: ["-z", "Z2K2L7AMLT2JPI", "-r", "test.se.k8s.work", "-i", "10.0.0.1"]
         env:
         - name: DDNS_ROUTE53_ZONE_ID
-          value: "Z2K2L7AMLT2JPI"
+          value: "ZONEID"
         - name: DDNS_ROUTE53_TTL
           value: "300"
         - name: DDNS_ROUTE53_COMMENT
-          value: "Created by the ddns-route53 damemonset"
-        - name: DDNS_ROUTE53_RECORD_SET
-          value: 
+          value: "Created by the ddns-route53 daemonset"
+        - name: DDNS_ROUTE53_DOMAIN
+          value: "Domain"
+        - name: DDNS_ROUTE53_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DDNS_ROUTE53_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         name: ddns-route53
         resources:
           limits:
-            cpu: 200m
-            memory: 50Mi
-          requests:
             cpu: 100m
-            memory: 30Mi
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
+            memory: 32Mi
+          requests:
+            cpu: 50m
+            memory: 16Mi
       dnsPolicy: ClusterFirst
       tolerations:
       - effect: NoSchedule
@@ -48,8 +52,6 @@ spec:
         operator: Exists
   updateStrategy:
     rollingUpdate:
-      maxUnavailable: 1
-    type: RollingUpdate
 status:
   currentNumberScheduled: 0
   desiredNumberScheduled: 0

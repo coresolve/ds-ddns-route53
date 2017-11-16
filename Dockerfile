@@ -6,4 +6,4 @@ RUN apk --no-cache add bash bind-tools && \
 
 COPY ddns-route53 /usr/local/bin/ddns-route53
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/usr/local/bin/ddns-route53"]
