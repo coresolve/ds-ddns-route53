@@ -2,8 +2,11 @@ This is a port to a daemonset that leverages the work done by [Mathias Söderber
 
 My contribution to this is the daemoneset.
 
-
 To apply this run `kubectl apply -f  `
+
+You will need to update the daemonset with your domain and zoneid.
+
+Tectonic does not have access to update the zone. You can add this permission using the example below.
 
 
 # ddns-route53
