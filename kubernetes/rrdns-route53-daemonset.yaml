@@ -41,10 +41,10 @@ spec:
         resources:
           limits:
             cpu: 100m
-            memory: 32Mi
+            memory: 60Mi
           requests:
             cpu: 50m
-            memory: 16Mi
+            memory: 40Mi
       dnsPolicy: ClusterFirst
       tolerations:
       - effect: NoSchedule
